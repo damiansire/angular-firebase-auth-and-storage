@@ -2,6 +2,14 @@
 
 This project was generated using [Angular CLI](https://github.com/angular/angular-cli) version 19.0.2.
 
+## Environment Setup
+
+Before running the application, you need to set up your environment variables:
+
+1. Copy `src/environments/environment.example.ts` to `src/environments/environment.ts`
+2. Copy `src/environments/environment.example.ts` to `src/environments/environment.prod.ts`
+3. Update both files with your Firebase configuration values from your Firebase Console
+
 ## Development server
 
 To start a local development server, run:
