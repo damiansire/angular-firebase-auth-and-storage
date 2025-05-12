@@ -1,13 +1,13 @@
-import { Component } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
-import { Router } from '@angular/router';
+import { Router, ActivatedRoute, RouterLink } from '@angular/router';
 import { AuthService } from '../../services/auth.service';
 
 @Component({
     selector: 'app-login',
     standalone: true,
-    imports: [CommonModule, ReactiveFormsModule],
+    imports: [CommonModule, ReactiveFormsModule, RouterLink],
     template: `
         <div class="login-container">
             <h2>Iniciar Sesión</h2>
@@ -49,6 +49,10 @@ import { AuthService } from '../../services/auth.service';
                 <button type="submit" [disabled]="!loginForm.valid" class="submit-button">
                     Iniciar Sesión
                 </button>
+
+                <div class="register-link">
+                    ¿No tienes cuenta? <a routerLink="/register">Regístrate aquí</a>
+                </div>
             </form>
         </div>
     `,
@@ -108,20 +112,49 @@ import { AuthService } from '../../services/auth.service';
             background-color: #ccc;
             cursor: not-allowed;
         }
+
+        .register-link {
+            text-align: center;
+            margin-top: 1rem;
+        }
+
+        .register-link a {
+            color: #007bff;
+            text-decoration: none;
+        }
+
+        .register-link a:hover {
+            text-decoration: underline;
+        }
     `]
 })
-export class LoginComponent {
+export class LoginComponent implements OnInit {
     loginForm: FormGroup;
     errorMessage: string = '';
+    returnUrl: string = '/profile';
 
     constructor(
         private fb: FormBuilder,
         private authService: AuthService,
-        private router: Router
+        private router: Router,
+        private route: ActivatedRoute
     ) {
         this.loginForm = this.fb.group({
             email: ['', [Validators.required, Validators.email]],
             password: ['', [Validators.required]]
+        });
+    }
+
+    ngOnInit() {
+        // Obtener la URL de retorno de los query params o usar '/profile' por defecto
+        this.returnUrl = this.route.snapshot.queryParams['returnUrl'] || '/profile';
+
+        // Si ya está autenticado, redirigir
+        this.authService.currentUser.subscribe(user => {
+            if (user) {
+                console.log('Login component - User already logged in:', user.email);
+                this.router.navigate([this.returnUrl]);
+            }
         });
     }
 
@@ -130,8 +163,10 @@ export class LoginComponent {
             try {
                 const { email, password } = this.loginForm.value;
                 await this.authService.login(email, password);
-                this.router.navigate(['/profile']);
+                console.log('Login successful, redirecting to:', this.returnUrl);
+                this.router.navigate([this.returnUrl]);
             } catch (error: any) {
+                console.error('Login error:', error);
                 this.errorMessage = error.message;
             }
         }

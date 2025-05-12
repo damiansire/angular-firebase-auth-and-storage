@@ -1,8 +1,9 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { AuthService } from '../../services/auth.service';
 import { User } from 'firebase/auth';
+import { Subscription } from 'rxjs';
 
 @Component({
     selector: 'app-profile',
@@ -41,10 +42,9 @@ import { User } from 'firebase/auth';
                     </button>
                 </div>
             } @else {
-                <p>No hay usuario logueado</p>
-                <button (click)="goToLogin()" class="login-button">
-                    Ir a Login
-                </button>
+                <div class="loading-message">
+                    <p>Verificando sesión...</p>
+                </div>
             }
         </div>
     `,
@@ -86,7 +86,7 @@ import { User } from 'firebase/auth';
             color: #555;
         }
 
-        .logout-button, .login-button {
+        .logout-button {
             padding: 0.75rem 1.5rem;
             background-color: #dc3545;
             color: white;
@@ -98,21 +98,20 @@ import { User } from 'firebase/auth';
             margin-top: 1rem;
         }
 
-        .login-button {
-            background-color: #007bff;
-        }
-
         .logout-button:hover {
             background-color: #c82333;
         }
 
-        .login-button:hover {
-            background-color: #0056b3;
+        .loading-message {
+            text-align: center;
+            padding: 2rem;
+            color: #666;
         }
     `]
 })
-export class ProfileComponent implements OnInit {
+export class ProfileComponent implements OnInit, OnDestroy {
     user: User | null = null;
+    private authSubscription: Subscription | null = null;
 
     constructor(
         private authService: AuthService,
@@ -120,12 +119,19 @@ export class ProfileComponent implements OnInit {
     ) { }
 
     ngOnInit() {
-        this.authService.currentUser.subscribe(user => {
+        this.authSubscription = this.authService.currentUser.subscribe(user => {
+            console.log('Profile component - Auth state:', user?.email); // Para debugging
             this.user = user;
             if (!user) {
                 this.router.navigate(['/login']);
             }
         });
+    }
+
+    ngOnDestroy() {
+        if (this.authSubscription) {
+            this.authSubscription.unsubscribe();
+        }
     }
 
     async logout() {
@@ -135,9 +141,5 @@ export class ProfileComponent implements OnInit {
         } catch (error) {
             console.error('Error al cerrar sesión:', error);
         }
-    }
-
-    goToLogin() {
-        this.router.navigate(['/login']);
     }
 } 

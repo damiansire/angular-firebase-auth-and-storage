@@ -1,19 +1,41 @@
 import { Injectable, inject } from '@angular/core';
-import { Auth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged, User } from 'firebase/auth';
+import {
+    Auth,
+    createUserWithEmailAndPassword,
+    signInWithEmailAndPassword,
+    signOut,
+    onAuthStateChanged,
+    User,
+    setPersistence,
+    browserLocalPersistence,
+    getAuth,
+    initializeAuth,
+    indexedDBLocalPersistence
+} from 'firebase/auth';
 import { Observable, BehaviorSubject } from 'rxjs';
 import { Auth as AngularFireAuth } from '@angular/fire/auth';
+import { FirebaseApp } from '@angular/fire/app';
 
 @Injectable({
     providedIn: 'root'
 })
 export class AuthService {
-    private auth = inject(AngularFireAuth);
+    private auth: Auth;
     private userSubject = new BehaviorSubject<User | null>(null);
     user$ = this.userSubject.asObservable();
 
     constructor() {
-        // Set up auth state observer
+        // Obtener la instancia de Firebase App
+        const app = inject(FirebaseApp);
+
+        // Inicializar Auth con persistencia
+        this.auth = initializeAuth(app, {
+            persistence: indexedDBLocalPersistence
+        });
+
+        // Configurar el observador de estado de autenticación
         onAuthStateChanged(this.auth, (user) => {
+            console.log('Auth state changed:', user?.email); // Para debugging
             this.userSubject.next(user);
         });
     }
@@ -24,19 +46,35 @@ export class AuthService {
     }
 
     // Register with email and password
-    register(email: string, password: string): Promise<User> {
-        return createUserWithEmailAndPassword(this.auth, email, password)
-            .then((userCredential) => userCredential.user);
+    async register(email: string, password: string): Promise<User> {
+        try {
+            const userCredential = await createUserWithEmailAndPassword(this.auth, email, password);
+            return userCredential.user;
+        } catch (error) {
+            console.error('Error en registro:', error);
+            throw error;
+        }
     }
 
     // Sign in with email and password
-    login(email: string, password: string): Promise<User> {
-        return signInWithEmailAndPassword(this.auth, email, password)
-            .then((userCredential) => userCredential.user);
+    async login(email: string, password: string): Promise<User> {
+        try {
+            const userCredential = await signInWithEmailAndPassword(this.auth, email, password);
+            return userCredential.user;
+        } catch (error) {
+            console.error('Error en login:', error);
+            throw error;
+        }
     }
 
     // Sign out
-    logout(): Promise<void> {
-        return signOut(this.auth);
+    async logout(): Promise<void> {
+        try {
+            await signOut(this.auth);
+            this.userSubject.next(null);
+        } catch (error) {
+            console.error('Error en logout:', error);
+            throw error;
+        }
     }
 } 
